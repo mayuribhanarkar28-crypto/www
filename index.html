@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MahaVitaran Bill & Payment System</title>
+    <!-- Chart.js for Graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        /* General Card Style */
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card-title { margin-top: 0; color: #333; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 20px; font-size: 18px; font-weight: 600; }
+
+        /* Inputs & Buttons */
+        select, input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; width: 100%; }
+        button { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.3s; }
+        .btn-primary { background: #d32f2f; color: white; }
+        .btn-primary:hover { background: #b71c1c; }
+        .btn-pay { background: #1e1b4b; color: white; width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; margin-top: 10px;}
+        .btn-pay:hover { background: #312e81; }
+
+        /* ==========================================
+           MAHAVITARAN BILL LAYOUT (Exact Format)
+           ========================================== */
+        .maha-bill { border: 1px solid #777; background: #fff; margin-bottom: 20px; font-size: 13px; color: #333; display: none; }
+        
+        /* Top Header */
+        .mb-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #777; padding: 15px; background: #f9f9f9; }
+        .mb-logo-area { display: flex; align-items: center; gap: 10px; }
+        .mb-logo-circle { width: 40px; height: 40px; background: #f39c12; border-radius: 50%; }
+        .mb-title h2 { margin: 0; color: #c0392b; font-size: 20px; }
+        .mb-title span { font-size: 11px; color: #555; }
+        .mb-bill-type { text-align: right; }
+        .mb-bill-type h3 { margin: 0; color: #333; font-size: 16px; }
+
+        /* 4-Box Grid */
+        .mb-4-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; border-bottom: 1px solid #777; }
+        .mb-box { padding: 10px; text-align: center; border-right: 1px solid #777; }
+        .mb-box:last-child { border-right: none; }
+        .mb-box .lbl { font-size: 10px; color: #666; text-transform: uppercase; margin-bottom: 5px; display: block; }
+        .mb-box .val { font-size: 16px; font-weight: bold; color: #333; }
+        .mb-box.green-bg { background: #e6f4ea; }
+        .mb-box.yellow-bg { background: #fef7e0; }
+        .mb-box .sub-lbl { font-size: 10px; color: #666; margin-top: 5px; display: block; }
+        .mb-box .green-text { color: #2e7d32; }
+        .mb-box .red-text { color: #c62828; }
+
+        /* Details Grid */
+        .mb-details-grid { display: grid; grid-template-columns: 1.2fr 1fr 0.8fr; border-bottom: 1px solid #777; }
+        .mb-detail-col { padding: 10px; border-right: 1px solid #777; }
+        .mb-detail-col:last-child { border-right: none; }
+        .mb-data-row { margin-bottom: 8px; }
+        .mb-data-row .lbl { font-size: 10px; color: #666; display: block; }
+        .mb-data-row .val { font-size: 12px; font-weight: bold; color: #333; display: block; margin-top: 2px; }
+
+        /* QR Section */
+        .mb-qr-section { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #777; gap: 15px; }
+        .mb-qr-box { width: 60px; height: 60px; border: 1px dashed #777; background: repeating-linear-gradient(45deg, #ddd, #ddd 2px, #fff 2px, #fff 4px); }
+
+        /* Tables */
+        .mb-table, .mb-particulars { width: 100%; border-collapse: collapse; text-align: center; }
+        .mb-table th, .mb-table td, .mb-particulars th, .mb-particulars td { border: 1px solid #777; padding: 8px; font-size: 12px; }
+        .mb-table th, .mb-particulars th { background: #f2f2f2; color: #555; font-weight: normal; }
+        .mb-particulars th { text-align: left; }
+        .mb-particulars td.amount { text-align: right; }
+        .mb-particulars tr.total-row td { font-weight: bold; background: #f9f9f9; font-size: 14px; }
+        
+        /* Bottom Banners */
+        .mb-bottom-banner { padding: 10px 15px; border-top: 1px solid #777; display: flex; justify-content: space-between; font-weight: bold; }
+        .mb-bottom-banner.green { background: #e6f4ea; color: #2e7d32; }
+        .mb-bottom-banner.yellow { background: #fef7e0; color: #c62828; }
+        .mb-bottom-banner.red-banner { background: #c62828; color: white; border-top: none; }
+
+        /* Graph Container */
+        .graph-container { width: 100%; height: 300px; }
+
+        /* Print CSS */
+        @media print {
+            body { background: #fff; padding: 0; }
+            .no-print { display: none !important; }
+            .maha-bill { border: 2px solid #000; display: block !important; }
+            .container { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 style="text-align: center; color: #333;" class="no-print">⚡ MahaVitaran Bill System</h1>
+
+    <!-- 1. SEARCH & GENERATE SECTION -->
+    <div class="card no-print">
+        <h3 class="card-title">🔍 Check / Generate Bill</h3>
+        <div style="display: flex; gap: 15px; align-items: center;">
+            <select id="prevMonth" style="flex: 1;">
+                <option value="01">January</option>
+                <option value="02">February</option>
+                <option value="03">March</option>
+                <option value="04">April</option>
+                <option value="05">May</option>
+                <option value="06">June</option>
+                <option value="07">July</option>
+                <option value="08">August</option>
+                <option value="09">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+            <select id="prevYear" style="flex: 1;">
+                <option value="2025">2025</option>
+                <option value="2026" selected>2026</option>
+                <option value="2027">2027</option>
+            </select>
+            <button class="btn-primary" style="flex: 1;" onclick="searchAndGenerateBill()">Search & Display</button>
+        </div>
+        <p id="statusMsg" style="color: green; font-weight: bold; margin-top: 10px; display: none;"></p>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. MAHAVITARAN BILL DISPLAY AREA           -->
+    <!-- ========================================== -->
+    <div id="billDisplay" class="maha-bill">
+        
+        <!-- Print Button -->
+        <div style="text-align: right; padding: 10px; background: #eee;" class="no-print">
+            <button onclick="window.print()" style="background: #34495e; color: white;">🖨️ Print / Save PDF</button>
+        </div>
+
+        <!-- Header -->
+        <div class="mb-header">
+            <div class="mb-logo-area">
+                <div class="mb-logo-circle"></div>
+                <div class="mb-title">
+                    <h2>MahaVitaran</h2>
+                    <span>Maharashtra State Electricity Distribution Co. Ltd.</span>
+                </div>
+            </div>
+            <div class="mb-bill-type">
+                <h3>Electricity Bill — <span id="dispMonthYear">-</span></h3>
+            </div>
+        </div>
+
+        <!-- 4 Box Grid -->
+        <div class="mb-4-grid">
+            <div class="mb-box">
+                <span class="lbl">Month</span>
+                <span class="val" id="dispMonth">-</span>
+                <span class="sub-lbl">Billing Month</span>
+            </div>
+            <div class="mb-box">
+                <span class="lbl">Due Date</span>
+                <span class="val" id="dispDueDate">-</span>
+                <span class="sub-lbl">Last date to pay</span>
+            </div>
+            <div class="mb-box green-bg">
+                <span class="lbl">Due Amount</span>
+                <span class="val green-text" id="dispAmount">₹0.00</span>
+                <span class="sub-lbl">If paid on/before due date</span>
+            </div>
+            <div class="mb-box yellow-bg">
+                <span class="lbl">After Due Date</span>
+                <span class="val red-text" id="dispAfterDue">₹0.00</span>
+                <span class="sub-lbl">(With penalty)</span>
+            </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="mb-details-grid">
+            <div class="mb-detail-col">
+                <div class="mb-data-row">
+                    <span class="lbl">Bill No.</span>
+                    <span class="val" id="dispBillNo">-</span>
+                </div>
+                <div class="mb-data-row">
+                    <span class="lbl">Consumer No.</span>
+                    <span class="val">1500810033390 / 75110</span>
+                </div>
+                <div class="mb-data-row">
+                    <span class="lbl">Address</span>
+                    <span class="val">BHANARKAR BUNGALOW, ARI-4291, Bramhapuri 442402</span>
+                </div>
+            </div>
+            <div class="mb-detail-col">
+                <div class="mb-data-row">
+                    <span class="lbl">Consumer Name</span>
+                    <span class="val">IRAVATI WAMAN BHANARKAR</span>
+                </div>
+                <div class="mb-data-row">
+                    <span class="lbl">Mobile</span>
+                    <span class="val">98xxxxxx64</span>
+                </div>
+                <div class="mb-data-row">
+                    <span class="lbl">Sanctioned Load</span>
+                    <span class="val">2.80 KW</span>
+                </div>
+            </div>
+            <div class="mb-detail-col">
+                <div class="mb-data-row">
+                    <span class="lbl">GSTIN</span>
+                    <span class="val">27AAECM2933K1ZB</span>
+                </div>
+                <div class="mb-data-row">
+                    <span class="lbl">Status</span>
+                    <span class="val" id="dispStatus" style="color:red;">Unpaid</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- QR Section -->
+        <div class="mb-qr-section">
+            <div class="mb-qr-box"></div>
+            <div>
+                <p style="font-size: 11px; margin: 0;">Scan QR code to pay your bill online</p>
+            </div>
+        </div>
+
+        <!-- Meter Table -->
+        <table class="mb-table">
+            <thead>
+                <tr>
+                    <th>Meter No.</th>
+                    <th>Previous Reading</th>
+                    <th>Current Reading</th>
+                    <th>Multiplier</th>
+                    <th>Units Used</th>
+                    <th>Rate (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>43318RJMHAPURI</td>
+                    <td id="dispPrevRead">-</td>
+                    <td id="dispCurrRead">-</td>
+                    <td>1.00</td>
+                    <td id="dispUnits">-</td>
+                    <td>1.50</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Particulars Table -->
+        <table class="mb-particulars">
+            <thead>
+                <tr>
+                    <th>Particulars</th>
+                    <th style="text-align: right;">Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Energy Charges (<span id="dispUnits2">-</span> × 1.50)</td>
+                    <td class="amount" id="dispEnergyChg">-</td>
+                </tr>
+                <tr>
+                    <td>Fixed Charges</td>
+                    <td class="amount">5.95</td>
+                </tr>
+                <tr>
+                    <td>Electricity Duty</td>
+                    <td class="amount">0.34</td>
+                </tr>
+                <tr>
+                    <td>Other Charges / Subsidy Adjustment</td>
+                    <td class="amount" id="dispOtherChg">-</td>
+                </tr>
+                <tr class="total-row">
+                    <td>Total Amount Payable</td>
+                    <td class="amount" id="dispTotalAmount">₹0.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Bottom Banners -->
+        <div class="mb-bottom-banner green">
+            <span>Due Amount (if paid on or before due date)</span>
+            <span id="dispBottomDue">₹0.00</span>
+        </div>
+        <div class="mb-bottom-banner yellow">
+            <span>Amount if paid after due date</span>
+            <span id="dispBottomAfterDue">₹0.00</span>
+        </div>
+    </div>
+    
+    <!-- ========================================== -->
+    <!-- 3. GRAPH SECTION                           -->
+    <!-- ========================================== -->
+    <div class="card no-print">
+        <h3 class="card-title">📊 Unit Consumption History (Month & Year)</h3>
+        <div class="graph-container">
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 4. PAYMENT SECTION                         -->
+    <!-- ========================================== -->
+    <div class="card no-print" style="max-width: 500px; margin: 0 auto;">
+        <h3 class="card-title">💳 Make a Payment</h3>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="font-weight: bold; font-size: 13px;">Consumer No / Customer ID</label>
+            <input type="text" value="1500810033390" readonly style="background: #e9ecef;">
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="font-weight: bold; font-size: 13px;">Select Bill</label>
+            <select id="payBillId" onchange="updatePaymentAmount()">
+                <option value="">Select unpaid bill</option>
+            </select>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="font-weight: bold; font-size: 13px;">Amount (₹)</label>
+            <input type="number" id="payAmount" value="0.00" readonly style="background: #e9ecef; font-weight: bold;">
+        </div>
+        
+        <button class="btn-pay" onclick="processPayment()">✅ Pay Now</button>
+    </div>
+
+</div>
+
+<script>
+    // Initial Data (Agar browser memory khali ho toh ye data load hoga)
+    const defaultBills = [
+        { month: "01", year: "2026", billNo: "1001", dueDate: "2026-01-25", payDate: "2026-01-20", units: 120, total: 250 },
+        { month: "02", year: "2026", billNo: "462020072318", dueDate: "2026-02-28", payDate: "", units: 61, total: 175 },
+        { month: "03", year: "2026", billNo: "1003", dueDate: "2026-03-25", payDate: "", units: 145, total: 290 }
+    ];
+
+    let billsData = JSON.parse(localStorage.getItem('mahaFinalBills')) || defaultBills;
+    let myChart; 
+
+    // Page Load Hote Hi Graph Aur Dropdown Update Karein
+    window.onload = function() {
+        updateGraph(); 
+        loadPaymentBills(); 
+    };
+
+    // Helper Functions
+    function getMonthName(monthStr) {
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        return monthNames[parseInt(monthStr) - 1];
+    }
+    function formatDate(dateStr) {
+        if(!dateStr) return "-";
+        const parts = dateStr.split('-');
+        return `${parts[2]}-${parts[1]}-${parts[0]}`; // YYYY-MM-DD to DD-MM-YYYY
+    }
+
+    // ==========================================
+    // 1. SEARCH / AUTO-GENERATE FUNCTION
+    // ==========================================
+    function searchAndGenerateBill() {
+        const month = document.getElementById('prevMonth').value;
+        const year = document.getElementById('prevYear').value;
+        const statusMsg = document.getElementById('statusMsg');
+
+        // Pehle dhundo
+        let foundBill = billsData.find(b => b.month === month && b.year === year);
+
+        // Agar nahi mila, toh Auto-Generate karo
+        if (!foundBill) {
+            const randomUnits = Math.floor(Math.random() * 100) + 50;
+            const totalAmount = (randomUnits * 1.5) + 85; 
+            
+            foundBill = {
+                month: month,
+                year: year,
+                billNo: Math.floor(100000000000 + Math.random() * 900000000000).toString(),
+                dueDate: `${year}-${month}-28`,
+                payDate: "",
+                units: randomUnits,
+                total: totalAmount
+            };
+
+            billsData.push(foundBill);
+            localStorage.setItem('mahaFinalBills', JSON.stringify(billsData));
+            
+            statusMsg.style.display = "block";
+            statusMsg.style.color = "blue";
+            statusMsg.innerText = `ℹ️ इस महीने का बिल नहीं था, इसलिए नया बिल जनरेट कर दिया गया है! (Units: ${randomUnits})`;
+        } else {
+            statusMsg.style.display = "block";
+            statusMsg.style.color = "green";
+            statusMsg.innerText = `✅ पुराना बिल मिल गया है! (Status: ${foundBill.payDate ? 'Paid' : 'Unpaid'})`;
+        }
+
+        // UI Update Karo
+        populateBillUI(foundBill);
+        
+        // Graph aur Payment Dropdown Update Karo
+        updateGraph(); 
+        loadPaymentBills(); 
+    }
+
+    // ==========================================
+    // 2. UI POPULATE FUNCTION (Data fill karna)
+    // ==========================================
+    function populateBillUI(bill) {
+        document.getElementById('billDisplay').style.display = 'block'; // Show bill
+
+        const monthName = getMonthName(bill.month);
+        const displayMonthYear = `${monthName} ${bill.year}`;
+        const formattedDueDate = formatDate(bill.dueDate);
+        const totalAmt = parseFloat(bill.total).toFixed(2);
+        const afterDueAmt = (parseFloat(bill.total) + 20).toFixed(2); // ₹20 penalty
+        const units = bill.units;
+        
+        // Mock Calculations
+        const energyChg = (units * 1.50).toFixed(2);
+        const otherChgs = (totalAmt - (parseFloat(energyChg) + 5.95 + 0.34)).toFixed(2); 
+
+        // Text Set karo
+        document.getElementById('dispMonthYear').innerText = displayMonthYear;
+        document.getElementById('dispMonth').innerText = displayMonthYear;
+        document.getElementById('dispDueDate').innerText = formattedDueDate;
+        document.getElementById('dispAmount').innerText = `₹${totalAmt}`;
+        document.getElementById('dispAfterDue').innerText = `₹${afterDueAmt}`;
+        document.getElementById('dispBillNo').innerText = bill.billNo;
+        
+        document.getElementById('dispStatus').innerText = bill.payDate ? "Paid" : "Unpaid";
+        document.getElementById('dispStatus').style.color = bill.payDate ? "green" : "red";
+
+        // Meter Reading
+        const prevRead = (5000 + Math.random() * 1000).toFixed(2);
+        const currRead = (parseFloat(prevRead) + units).toFixed(2);
+        document.getElementById('dispPrevRead').innerText = prevRead;
+        document.getElementById('dispCurrRead').innerText = currRead;
+        document.getElementById('dispUnits').innerText = units;
+        document.getElementById('dispUnits2').innerText = units;
+        
+        // Table Breakdown
+        document.getElementById('dispEnergyChg').innerText = energyChg;
+        document.getElementById('dispOtherChg').innerText = otherChgs;
+        document.getElementById('dispTotalAmount').innerText = `₹${totalAmt}`;
+        
+        // Bottom Banners
+        document.getElementById('dispBottomDue').innerText = `₹${totalAmt}`;
+        document.getElementById('dispBottomAfterDue').innerText = `₹${afterDueAmt}`;
+    }
+
+    // ==========================================
+    // 3. GRAPH FUNCTION
+    // ==========================================
+    function updateGraph() {
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        
+        // Data ko Month/Year ke hisab se sort karo
+        billsData.sort((a, b) => (a.year + a.month) - (b.year + b.month));
+        
+        // Last 6 mahine ka data utha lo
+        const last6Bills = billsData.slice(-6);
+
+        // X-Axis ke liye Label (Month-Year)
+        const labels = last6Bills.map(b => monthNames[parseInt(b.month) - 1] + "-" + b.year);
+        const units = last6Bills.map(b => b.units);
+
+        const ctx = document.getElementById('myChart').getContext('2d');
+        if (myChart) { myChart.destroy(); } // Purana graph clear karo
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Units Consumed',
+                    data: units,
+                    backgroundColor: '#4a90e2',
+                    borderColor: '#2c3e50',
+                    borderWidth: 1,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    // ==========================================
+    // 4. PAYMENT FUNCTIONS
+    // ==========================================
+    function loadPaymentBills() {
+        const billDropdown = document.getElementById('payBillId');
+        billDropdown.innerHTML = '<option value="">Select unpaid bill</option>';
+        document.getElementById('payAmount').value = "0.00";
+
+        // Sirf Unpaid bills filter karo
+        const unpaidBills = billsData.filter(b => !b.payDate);
+
+        if(unpaidBills.length === 0) {
+            billDropdown.innerHTML = '<option value="">No pending bills found</option>';
+            return;
+        }
+
+        unpaidBills.forEach(bill => {
+            const monthStr = getMonthName(bill.month).substring(0, 3);
+            const option = document.createElement('option');
+            option.value = bill.billNo; 
+            option.text = `${monthStr}-${bill.year} (Bill No: ${bill.billNo})`;
+            option.dataset.amount = bill.total; 
+            billDropdown.add(option);
+        });
+    }
+
+    function updatePaymentAmount() {
+        const billDropdown = document.getElementById('payBillId');
+        const selectedOption = billDropdown.options[billDropdown.selectedIndex];
+        
+        if(selectedOption.value !== "") {
+            document.getElementById('payAmount').value = selectedOption.dataset.amount;
+        } else {
+            document.getElementById('payAmount').value = "0.00";
+        }
+    }
+
+    function processPayment() {
+        const billId = document.getElementById('payBillId').value;
+        const amount = document.getElementById('payAmount').value;
+
+        if(!billId || amount === "0.00") {
+            alert("Please select a valid bill to pay.");
+            return;
+        }
+
+        const payBtn = document.querySelector('.btn-pay');
+        payBtn.innerHTML = "⏳ Processing...";
+        payBtn.disabled = true;
+
+        setTimeout(() => {
+            // Bill mark as paid
+            const billIndex = billsData.findIndex(b => b.billNo === billId);
+            if(billIndex !== -1) {
+                const today = new Date().toISOString().split('T')[0];
+                billsData[billIndex].payDate = today; // Paid today
+                localStorage.setItem('mahaFinalBills', JSON.stringify(billsData));
+                
+                alert(`✅ Payment of ₹${amount} Successful!`);
+                
+                // Reset Form
+                loadPaymentBills(); 
+                document.getElementById('payAmount').value = "0.00";
+                payBtn.innerHTML = "✅ Pay Now";
+                payBtn.disabled = false;
+
+                // Agar yahi bill screen par khula hai, toh usko turant "Paid" show karo
+                const currentBillNo = document.getElementById('dispBillNo').innerText;
+                if(currentBillNo === billId) {
+                    document.getElementById('dispStatus').innerText = "Paid";
+                    document.getElementById('dispStatus').style.color = "green";
+                }
+            }
+        }, 1500); 
+    }
+</script>
+</body>
+</html>
